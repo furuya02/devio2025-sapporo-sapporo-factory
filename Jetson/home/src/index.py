@@ -33,23 +33,7 @@ IOU_THRESHOLD = 0.5
 BASE_IMAGE_PATH = "./base_image.jpg"
 DETECT_IMAGE_PATH = "./detect_image"
 DETECT_SCORE_PATH = "./detect_score"
-EMBEDDING_THRESHOLD = 0.94
-
-
-# def adjust_timing(message: str, sec: float) -> None:
-#     print(f"{message} {sec} 秒待機")
-#     threading.Event().wait(sec)
-
-
-# def process_sensor_event(embedding, save_image_path, sensor, servo):
-#     embedding_score = embedding.compare(save_image_path)
-#     print(f"embedding_score: {embedding_score:.4f}")
-#     adjust_timing("センサーのチャタリング防止のためのウエイト", 1.0)
-#     sensor.reset()
-#     adjust_timing("排除バーのタイミング調整", 2.0)
-#     if embedding_score < EMBEDDING_THRESHOLD:
-#         print("アヒルを排除します")
-#         servo.close_gate()
+EMBEDDING_THRESHOLD = 0.92
 
 
 def worker_thread(embedding, save_image_path_list, detect_scores, sensor):
@@ -74,10 +58,15 @@ def worker_thread(embedding, save_image_path_list, detect_scores, sensor):
         print(f"\033[96mOK {best_image_path} {best_score:.4f}\033[0m")
 
     # 画像送信
-    f = open(best_image_path, "rb")
-    basename = os.path.basename(best_image_path)
-    s3_client.put_object(Bucket=BUCKET_NAME, Key=f"{PREFIX}{basename}", Body=f)
-    imageUrl = f"{PREFIX}{basename}"
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    judge = "OK" if best_score >= EMBEDDING_THRESHOLD else "NG"
+    s3_key = f"{PREFIX}{timestamp}_{judge}_{best_score:.3f}.jpg"
+
+    with open(best_image_path, "rb") as f:
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=s3_key, Body=f)
+    imageUrl = s3_key
     # MQTT送信
     iot_data_client.publish(
         topic=MQTT_TOPIC,

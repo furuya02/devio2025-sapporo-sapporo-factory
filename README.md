@@ -74,5 +74,20 @@ root@ubuntu:/src#
       Limit=100
   )
 
-## CDK
 
+# IoT Codeへの送信データ
+```
+
+duck-factory/line-01
+
+{
+  "state": {
+    "reported": {
+      "score": 0.9535214038151145,
+      "judge": "OK",
+      "imageUrl": "img/20250830_194122_OK_0.954.jpg"
+    }
+  }
+}
+
+```
