@@ -11,7 +11,7 @@
     {
       "label": "download",
       "type": "shell",
-      "command": "scp -r sin@192.168.1.31:~/home2/2025.07.26_DevIO_SAPPORO_Ahiru_Factory/src/detect_image ."
+      "command": "scp -r sin@192.168.1.31:~/home2/2025.07.26_DevIO_SAPPORO_Ahiru_Factory/src/detect_score ."
     }
   ]
 }

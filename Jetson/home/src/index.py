@@ -4,6 +4,7 @@ import threading
 from duck_centerer import DuckCenterer
 from embedding import Embedding
 from detect_images import DetectImages
+from detect_scores import DetectScores
 from base_image import BaseImage
 from sensor import Sensor
 from servo import Servo
@@ -14,12 +15,10 @@ import json
 
 s3_client = boto3.client("s3", region_name="ap-northeast-1")
 iot_data_client = boto3.client("iot-data", region_name="ap-northeast-1")
-BUCKET_NAME = ""
+BUCKET_NAME = "duck-factory-229914322323"
 PREFIX = "img/"
-CLOUD_FRONT_URL = ""
-MQTT_TOPIC = ""
-LINE_NAME = ""
-EQUIPMENT_NAME = ""
+LINE_NAME = "line-01"  # ライン名を設定してください（例: "Line-01"）
+MQTT_TOPIC = f"duck-factory/{LINE_NAME}"  # MQTT トピックを設定してください（例: "$aws/things/duck-factory/shadow/update")
 
 
 CAMERA_ID = 0
@@ -33,6 +32,7 @@ CONF_MINIMUM = 0.75
 IOU_THRESHOLD = 0.5
 BASE_IMAGE_PATH = "./base_image.jpg"
 DETECT_IMAGE_PATH = "./detect_image"
+DETECT_SCORE_PATH = "./detect_score"
 EMBEDDING_THRESHOLD = 0.94
 
 
@@ -52,27 +52,49 @@ EMBEDDING_THRESHOLD = 0.94
 #         servo.close_gate()
 
 
-def worker_thread(embedding, save_image_path_list, sensor):
+def worker_thread(embedding, save_image_path_list, detect_scores, sensor):
     best_score = 0
     best_image_path = None
+    score_list = []
     for save_image_path in save_image_path_list:
         embedding_score = embedding.compare(save_image_path)
         print(f"embedding_score: {save_image_path} {embedding_score:.4f}")
+        score_list.append(embedding_score)
         if embedding_score > best_score:
             best_score = embedding_score
             best_image_path = save_image_path
 
-    if best_score < EMBEDDING_THRESHOLD:
-        # エラー画像を送る
-        # f = open(best_image_path, "rb")
-        # basename = os.path.basename(best_image_path)
+    detect_scores.save_score(
+        best_score, cv2.imread(best_image_path), EMBEDDING_THRESHOLD
+    )
 
-        # s3_client.put_object(Bucket=BUCKET_NAME, Key=f"{PREFIX}{basename}", Body=f)
-        # imageUrl = f"{CLOUD_FRONT_URL}{PREFIX}{basename}"
-        # decision = 1
-        print(f"\033[91mNG画像: {best_image_path} {best_score:.4f}\033[0m")
+    if best_score < EMBEDDING_THRESHOLD:
+        print(f"\033[91mNG {best_image_path} {best_score:.4f}\033[0m")
     else:
-        print(f"\033[96mOK画像: {best_image_path} {best_score:.4f}\033[0m")
+        print(f"\033[96mOK {best_image_path} {best_score:.4f}\033[0m")
+
+    # 画像送信
+    f = open(best_image_path, "rb")
+    basename = os.path.basename(best_image_path)
+    s3_client.put_object(Bucket=BUCKET_NAME, Key=f"{PREFIX}{basename}", Body=f)
+    imageUrl = f"{PREFIX}{basename}"
+    # MQTT送信
+    iot_data_client.publish(
+        topic=MQTT_TOPIC,
+        qos=1,
+        payload=json.dumps(
+            {
+                "state": {
+                    "reported": {
+                        "score": best_score,
+                        "judge": "OK" if best_score >= EMBEDDING_THRESHOLD else "NG",
+                        "imageUrl": imageUrl,
+                    }
+                }
+            }
+        ),
+    )
+
     time.sleep(2)
     sensor.reset()
     print("sensor off")
@@ -90,6 +112,7 @@ def main():
         raise IOError("カメラから画像が取得できません")
 
     detect_images = DetectImages(detect_img_path=DETECT_IMAGE_PATH)
+    detect_scores = DetectScores(detect_score_path=DETECT_SCORE_PATH)
     base_image = BaseImage(BASE_IMAGE_PATH)
     centerer = DuckCenterer(
         model_path=MODEL_PATH,
@@ -119,7 +142,7 @@ def main():
             cv2.imshow("frame", frame)
 
             if sensor.check() == "on":
-                print("sensor on")
+                print("センサー ON")
                 shoot_counter = 4
             if shoot_counter > 0:
                 save_image_path = detect_images.save_image(duck_img)
@@ -130,7 +153,7 @@ def main():
                 if shoot_counter == 0:
                     t = threading.Thread(
                         target=worker_thread,
-                        args=(embedding, save_image_path_list, sensor),
+                        args=(embedding, save_image_path_list, detect_scores, sensor),
                     )
                     t.start()
                     save_image_path_list = []
