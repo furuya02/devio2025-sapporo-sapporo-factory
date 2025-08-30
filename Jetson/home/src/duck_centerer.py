@@ -49,9 +49,32 @@ class DuckCenterer:
         th, tw = target_img.shape[:2]
         dx = int((ow - tw) / 2)
         dy = int((oh - th) / 2)
-        if dy < 0 or dx < 0:
-            return center_img
-        center_img[dy : dy + th, dx : dx + tw] = target_img
+        
+        # dx, dyが負の場合の処理
+        if dx < 0:
+            # 画像が幅より大きい場合、中央部分を切り取る
+            crop_x = -dx
+            tw = ow
+            dx = 0
+            target_img = target_img[:, crop_x:crop_x + tw]
+        if dy < 0:
+            # 画像が高さより大きい場合、中央部分を切り取る
+            crop_y = -dy
+            th = oh
+            dy = 0
+            target_img = target_img[crop_y:crop_y + th, :]
+            
+        # 画像がはみ出す場合のクリッピング
+        if dy + th > oh:
+            th = oh - dy
+            target_img = target_img[:th, :]
+        if dx + tw > ow:
+            tw = ow - dx
+            target_img = target_img[:, :tw]
+            
+        # サイズが有効な場合のみ配置
+        if th > 0 and tw > 0 and target_img.size > 0:
+            center_img[dy : dy + th, dx : dx + tw] = target_img
         return center_img
 
     def get_detect_img(self, image, target_mask):

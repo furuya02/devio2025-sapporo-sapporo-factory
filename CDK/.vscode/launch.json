@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "デバッグ実行",
+      "program": "${workspaceRoot}/.vscode/drive.js",
+      "cwd": "${workspaceRoot}",
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/**/*.js"],
+      "env": {
+        "TZ": "Asia/Tokyo"
+      },
+      "args": ["event.json"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

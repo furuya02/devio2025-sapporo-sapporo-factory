@@ -6,12 +6,12 @@
     {
       "label": "upload",
       "type": "shell",
-      "command": "scp -r home/* sin@192.168.1.31:~/home2/2025.07.26_DevIO_SAPPORO_Ahiru_Factory/"
+      "command": "scp -r Jetson/home/* sin@192.168.1.31:~/home2/2025.07.26_DevIO_SAPPORO_Ahiru_Factory/"
     },
     {
       "label": "download",
       "type": "shell",
-      "command": "scp -r sin@192.168.1.31:~/home2/2025.07.26_DevIO_SAPPORO_Ahiru_Factory/src/x ."
+      "command": "scp -r sin@192.168.1.31:~/home2/2025.07.26_DevIO_SAPPORO_Ahiru_Factory/src/detect_image ."
     }
   ]
 }

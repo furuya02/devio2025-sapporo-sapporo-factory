@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "typescript",
+      "tsconfig": "tsconfig.json",
+      "option": "watch",
+      "problemMatcher": ["$tsc-watch"],
+      "group": "build",
+      "label": "tsc: ウォッチ - tsconfig.json"
+    },
+    {
+      "label": "deploy",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "deploy"],
+      "isBackground": false,
+      "detail": "cdk deploy",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}
